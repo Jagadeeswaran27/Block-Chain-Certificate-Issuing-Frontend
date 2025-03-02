@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import CustomDivider from "../components/common/CustomDivider";
 import GoogleAuthButton from "../components/auth/GoogleAuthButton";
 import PrimaryAuthButton from "../components/auth/PrimaryAuthButton";
+import { signOut } from "firebase/auth";
+import { auth } from "../core/config/Firebase";
+import { googleLogin, signup } from "../core/services/AuthService";
+import { showToast } from "../utils/Toast";
+import { Routes } from "../utils/Routes";
 
 const SignupPage = () => {
   const [name, setName] = useState<string>("");
@@ -12,56 +17,48 @@ const SignupPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const navigate = useNavigate();
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!name || !email || !password || !confirmPassword) {
       setError("Please fill in all fields");
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+    setIsLoading(true);
+    setError(null);
 
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Here you would add your actual signup logic
-      console.log("Signup with:", { name, email, password });
-
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Redirect or handle successful signup here
-    } catch (err: any) {
-      setError(err.message || "Signup failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const isSuccess = await signup(email, password, name);
+    if (isSuccess) {
+      showToast({
+        message: "Check Your Email for Verification",
+        type: "success",
+      });
+      navigate(Routes.login);
+    } else {
+      showToast({ message: "Error signing up", type: "error" });
     }
+    await signOut(auth);
+    setIsLoading(false);
   };
 
   const handleGoogleSignup = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    const user = await googleLogin();
+    console.log(user);
 
-      // Here you would implement Google authentication
-      console.log("Signing up with Google");
-
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Redirect or handle successful signup
-    } catch (err: any) {
-      setError(err.message || "Google signup failed. Please try again.");
-    } finally {
+    if (user) {
+      showToast({ message: "Login successful", type: "success" });
+      navigate(Routes.home);
+    } else {
+      showToast({ message: "Invalid Credentials", type: "error" });
       setIsLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-600 to-primary-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl duration-300">
@@ -242,7 +239,7 @@ const SignupPage = () => {
               to="/login"
               className="font-medium text-primary-600 hover:text-primary-500 transition-colors"
             >
-              Sign in
+              Login in
             </Link>
           </p>
         </div>

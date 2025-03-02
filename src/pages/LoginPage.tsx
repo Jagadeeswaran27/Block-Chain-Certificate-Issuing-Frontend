@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import CustomDivider from "../components/common/CustomDivider";
 import GoogleAuthButton from "../components/auth/GoogleAuthButton";
 import PrimaryAuthButton from "../components/auth/PrimaryAuthButton";
+import { googleLogin, login } from "../core/services/AuthService";
+import { Routes } from "../utils/Routes";
+import { showToast } from "../utils/Toast";
 
 const LoginPage = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,39 +23,27 @@ const LoginPage = () => {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
-      // Here you would add your actual login logic
-      console.log("Login with:", { email, password });
-
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Redirect or handle successful login here
-    } catch (err: any) {
-      setError(err.message || "Login failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const success = await login(email, password);
+    if (success?.user) {
+      showToast({ message: "Login successful", type: "success" });
+      navigate(Routes.home);
+    } else {
+      showToast({ message: "Invalid Credentials", type: "error" });
     }
+    setIsLoading(false);
   };
 
   const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Here you would implement Google authentication
-      console.log("Logging in with Google");
-
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Redirect or handle successful login
-    } catch (err: any) {
-      setError(err.message || "Google login failed. Please try again.");
-    } finally {
+    setIsLoading(true);
+    const user = await googleLogin();
+    if (user) {
+      showToast({ message: "Login successful", type: "success" });
+      navigate(Routes.home);
+    } else {
+      showToast({ message: "Invalid Credentials", type: "error" });
       setIsLoading(false);
     }
   };

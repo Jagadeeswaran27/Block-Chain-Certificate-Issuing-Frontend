@@ -1,9 +1,19 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useContext, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Routes } from "../../utils/Routes";
+import { AuthContext } from "../../store/context/AuthContext";
+import { logout } from "../../core/services/AuthService";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate(Routes.home);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <header className="bg-white sticky top-0 left-0 z-10 shadow-lg">
@@ -67,20 +77,39 @@ export default function Header() {
           </div>
 
           {/* Auth buttons - desktop */}
-          <div className="hidden md:flex items-center">
-            <Link
-              to={Routes.login}
-              className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-800"
-            >
-              Log in
-            </Link>
-            <Link
-              to={Routes.signup}
-              className="ml-4 px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-md shadow-sm"
-            >
-              Sign up
-            </Link>
-          </div>
+          {!user ? (
+            <div className="hidden md:flex items-center">
+              <Link
+                to={Routes.login}
+                className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-800"
+              >
+                Log in
+              </Link>
+              <Link
+                to={Routes.signup}
+                className="ml-4 px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-md shadow-sm"
+              >
+                Sign up
+              </Link>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="flex items-center">
+                <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center text-white font-medium">
+                  {user.userName.charAt(0).toUpperCase()}
+                </div>
+                <span className="ml-2 text-sm font-medium text-neutral-800">
+                  {user.userName}
+                </span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md shadow-sm"
+              >
+                Logout
+              </button>
+            </div>
+          )}
 
           {/* Mobile menu button */}
           <div className="flex items-center md:hidden">
@@ -190,22 +219,45 @@ export default function Header() {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-4">
-              <div className="flex-shrink-0">
-                <Link
-                  to={Routes.login}
-                  className="ml-auto px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-800"
-                >
-                  Log in
-                </Link>
-              </div>
-              <div className="ml-3">
-                <Link
-                  to={Routes.signup}
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-md shadow-sm"
-                >
-                  Sign up
-                </Link>
-              </div>
+              {!user ? (
+                <>
+                  <div className="flex-shrink-0">
+                    <Link
+                      to={Routes.login}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="ml-auto px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-800"
+                    >
+                      Log in
+                    </Link>
+                  </div>
+                  <div className="ml-3">
+                    <Link
+                      to={Routes.signup}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-md shadow-sm"
+                    >
+                      Sign up
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="w-full">
+                  <div className="flex items-center mb-3">
+                    <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center text-white font-medium">
+                      {user.userName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="ml-2 text-sm font-medium text-neutral-800">
+                      {user.userName}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md shadow-sm"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
