@@ -11,6 +11,8 @@ import AuthContextProvider from "./store/context/AuthContext";
 import ProtectedRoute from "./store/protection/ProtectedRoute";
 import { ToastContainer } from "react-toastify";
 import ScrollToTop from "./components/common/ScrollToTop";
+import AdminProtection from "./store/protection/AdminProtection";
+import AdminDashboard from "./pages/AdminDashboard";
 
 export default function App() {
   return (
@@ -29,6 +31,10 @@ export default function App() {
             <Route
               path={AppRoutes.verifyCertificate}
               element={<VerifyCertificatePage />}
+            />
+            <Route
+              path={AppRoutes.adminDashboard}
+              element={<AdminProtection element={<AdminDashboard />} />}
             />
           </Route>
         </Routes>

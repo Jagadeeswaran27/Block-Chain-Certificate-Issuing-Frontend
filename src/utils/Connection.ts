@@ -156,6 +156,11 @@ export const ABI = [
         type: "string",
       },
       {
+        internalType: "string",
+        name: "certificateTitle",
+        type: "string",
+      },
+      {
         internalType: "uint256",
         name: "issueDate",
         type: "uint256",
@@ -222,6 +227,11 @@ export const ABI = [
       {
         internalType: "string",
         name: "_certificateHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_certificateTitle",
         type: "string",
       },
       {
@@ -466,7 +476,12 @@ export const ABI = [
     outputs: [
       {
         internalType: "string",
-        name: "",
+        name: "tokenUri",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "issuer",
         type: "string",
       },
     ],
@@ -474,3 +489,5 @@ export const ABI = [
     type: "function",
   },
 ];
+
+export const ADDRESS = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";

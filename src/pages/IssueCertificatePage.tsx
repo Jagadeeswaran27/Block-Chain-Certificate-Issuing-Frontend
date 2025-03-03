@@ -5,20 +5,58 @@ import Step1Information from "../components/certificate/IssuerApplication/Step1I
 import Step2Verification from "../components/certificate/IssuerApplication/Step2Verification";
 import Step3Review from "../components/certificate/IssuerApplication/Step3Review";
 import IssueCertificateForm from "../components/certificate/IssueCertificateForm";
+import { IssuerApplication } from "../types/Issuer";
+import { submitApplication } from "../core/services/IssuerService";
+import { showToast } from "../utils/Toast";
 
 export default function IssueCertificatePage() {
   const { user } = useContext(AuthContext);
   const [formStep, setFormStep] = useState(0);
   const [govtDocument, setGovtDocument] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [formData, setFormData] = useState<IssuerApplication>({
+    organizationName: "",
+    website: "",
+    location: "",
+    phoneNumber: "",
+  });
 
-  const isIssuer = user?.type === "issuer";
+  const isIssuer = user?.type === "issuer" || user?.type === "admin";
 
   const nextStep = () => setFormStep((prev) => Math.min(prev + 1, 2));
   const prevStep = () => setFormStep((prev) => Math.max(prev - 1, 0));
 
+  const handleSubmitApplication = async () => {
+    if (
+      !govtDocument ||
+      !formData.organizationName ||
+      !formData.location ||
+      !formData.phoneNumber
+    ) {
+      return showToast({ type: "error", message: "Please fill all fields" });
+    }
+    setIsLoading(true);
+    const response = await submitApplication(formData, govtDocument);
+    if (response) {
+      showToast({
+        type: "success",
+        message: "Application submitted successfully",
+      });
+      setFormData({
+        organizationName: "",
+        website: "",
+        location: "",
+        phoneNumber: "",
+      });
+      setGovtDocument(null);
+    } else {
+      showToast({ type: "error", message: "Error submitting application" });
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-750 to-neutral-850 text-white">
-      {/* Decorative header pattern */}
       <div className="absolute top-0 inset-x-0 h-40 bg-primary-600/20 -z-10">
         <div
           className="w-full h-full"
@@ -80,7 +118,13 @@ export default function IssueCertificatePage() {
             </div>
 
             <div className="p-8">
-              {formStep === 0 && <Step1Information nextStep={nextStep} />}
+              {formStep === 0 && (
+                <Step1Information
+                  nextStep={nextStep}
+                  formData={formData}
+                  setFormData={setFormData}
+                />
+              )}
 
               {formStep === 1 && (
                 <Step2Verification
@@ -92,7 +136,13 @@ export default function IssueCertificatePage() {
               )}
 
               {formStep === 2 && (
-                <Step3Review prevStep={prevStep} govtDocument={govtDocument} />
+                <Step3Review
+                  isLoading={isLoading}
+                  submitApplication={handleSubmitApplication}
+                  prevStep={prevStep}
+                  govtDocument={govtDocument}
+                  formData={formData}
+                />
               )}
             </div>
           </div>

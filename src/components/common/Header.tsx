@@ -73,6 +73,18 @@ export default function Header() {
               >
                 Verify Certificate
               </NavLink>
+              {user?.type == "admin" && (
+                <NavLink
+                  to={Routes.adminDashboard || "#"}
+                  className={({ isActive }) =>
+                    isActive
+                      ? "text-primary-500 border-primary-500 font-medium border-b-2 px-1 pt-1 text-sm"
+                      : "text-neutral-750 hover:text-primary-500 px-1 pt-1 text-sm font-medium"
+                  }
+                >
+                  Dashboard
+                </NavLink>
+              )}
             </nav>
           </div>
 
@@ -216,6 +228,19 @@ export default function Header() {
             >
               Verify Certificate
             </NavLink>
+            {user?.type === "admin" && (
+              <NavLink
+                onClick={() => setIsMobileMenuOpen(false)}
+                to={Routes.adminDashboard || "#"}
+                className={({ isActive }) =>
+                  isActive
+                    ? "bg-primary-50 border-primary-500 text-primary-500 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+                    : "border-transparent text-neutral-750 hover:bg-gray-50 hover:border-primary-300 hover:text-primary-500 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+                }
+              >
+                Dashboard
+              </NavLink>
+            )}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-4">

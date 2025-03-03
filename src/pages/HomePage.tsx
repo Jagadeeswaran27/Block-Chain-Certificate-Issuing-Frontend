@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import { ABI } from "../utils/ABI";
+import { ABI, ADDRESS } from "../utils/Connection";
 
 declare global {
   interface Window {
@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-const CONTRACT_ADDRESS = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+const CONTRACT_ADDRESS = ADDRESS;
 const CONTRACT_ABI = ABI;
 
 const HomePage = () => {
@@ -17,6 +17,8 @@ const HomePage = () => {
   const [verificationResult, setVerificationResult] = useState<string | null>(
     null
   );
+  const [issuerName, setIssuerName] = useState<string | null>(null);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
@@ -52,6 +54,8 @@ const HomePage = () => {
     try {
       setVerificationStatus("loading");
       setVerificationResult("Connecting to blockchain...");
+      setIssuerName(null);
+      setDocumentUrl(null);
 
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
@@ -64,15 +68,18 @@ const HomePage = () => {
       );
 
       setVerificationResult("Verifying certificate...");
-      const documentUrl = await contract.verifyCertificate(
+      const result = await contract.verifyCertificate(
         certificateHash,
         recipient
       );
 
+      // Handle both return values
+      const [url, issuer] = result;
+
+      setDocumentUrl(url);
+      setIssuerName(issuer);
       setVerificationStatus("success");
-      setVerificationResult(
-        `Certificate is valid! View document at: ${documentUrl}`
-      );
+      setVerificationResult("Certificate is valid!");
     } catch (error: any) {
       console.error("Error:", error);
       setVerificationStatus("error");
@@ -86,7 +93,6 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
       <div className="bg-gradient-to-br from-primary-600 to-primary-800 text-white md:min-h-[calc(100vh-64px)] md:max-h-[calc(100vh-64px)] flex items-center justify-center">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
@@ -205,6 +211,24 @@ const HomePage = () => {
                           }`}
                         >
                           <p className="text-sm">{verificationResult}</p>
+                          {verificationStatus === "success" && (
+                            <>
+                              <p className="text-sm mt-2">
+                                <span className="font-semibold">Issuer:</span>{" "}
+                                {issuerName}
+                              </p>
+                              {documentUrl && (
+                                <a
+                                  href={documentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm mt-2 block text-secondary-400 hover:text-secondary-300 underline"
+                                >
+                                  View Certificate Document
+                                </a>
+                              )}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -216,7 +240,6 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Features Section */}
       <div id="learn-more" className="py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">

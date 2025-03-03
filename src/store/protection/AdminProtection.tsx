@@ -3,12 +3,11 @@ import { AuthContext } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Routes } from "../../utils/Routes";
 
-interface ProtectedRouteProps {
+interface AdminProtectionProps {
   element: React.ReactElement;
 }
-
-export default function ProtectedRoute({ element }: ProtectedRouteProps) {
-  const { user, loading } = useContext(AuthContext);
+export default function AdminProtection({ element }: AdminProtectionProps) {
+  const { loading, user } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -17,9 +16,9 @@ export default function ProtectedRoute({ element }: ProtectedRouteProps) {
       </div>
     );
   }
-  if (!user) {
-    return <Navigate to={Routes.login} />;
-  }
 
+  if (!user || user.type !== "admin") {
+    return <Navigate to={Routes.home} />;
+  }
   return element;
 }

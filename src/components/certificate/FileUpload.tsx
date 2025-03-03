@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface FileUploadProps {
   file: File | null;
   setFile: (file: File | null) => void;
@@ -13,9 +15,50 @@ const FileUpload = ({
   placeholder = "Drag and drop your file",
   fileTypes = "PDF, PNG, JPG up to 10MB",
 }: FileUploadProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+    }
+  };
+
   return (
     <div className="h-full">
-      <div className="flex flex-col h-64 border-2 border-dashed rounded-lg border-gray-600 hover:border-primary-400 cursor-pointer transition-colors duration-200 bg-neutral-750/50">
+      <div
+        className={`flex flex-col h-64 border-2 border-dashed rounded-lg 
+          ${
+            isDragging
+              ? "border-primary-400 bg-primary-500/10"
+              : "border-gray-600 hover:border-primary-400 bg-neutral-750/50"
+          } 
+          cursor-pointer transition-colors duration-200`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         {file ? (
           <div className="flex flex-col items-center justify-center h-full p-6">
             <div className="bg-primary-500/20 rounded-full p-3 mb-3">
@@ -68,9 +111,11 @@ const FileUpload = ({
             </div>
             <div className="text-center">
               <p className="text-lg text-gray-400 font-medium mb-1">
-                {placeholder}
+                {isDragging ? "Drop your file here" : placeholder}
               </p>
-              <p className="text-gray-500 mb-3">or click to browse</p>
+              {!isDragging && (
+                <p className="text-gray-500 mb-3">or click to browse</p>
+              )}
               <p className="text-xs text-gray-500">{fileTypes}</p>
             </div>
             <input

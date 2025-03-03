@@ -1,9 +1,20 @@
+import { IssuerApplication } from "../../../types/Issuer";
+
 interface Step3Props {
   prevStep: () => void;
   govtDocument: File | null;
+  formData: IssuerApplication;
+  submitApplication: () => void;
+  isLoading: boolean;
 }
 
-const Step3Review: React.FC<Step3Props> = ({ prevStep, govtDocument }) => {
+const Step3Review: React.FC<Step3Props> = ({
+  prevStep,
+  govtDocument,
+  formData,
+  submitApplication,
+  isLoading,
+}) => {
   return (
     <>
       <div className="bg-gradient-to-br from-secondary-500/10 to-primary-500/10 rounded-lg p-4 mb-8 border border-gray-700">
@@ -39,37 +50,37 @@ const Step3Review: React.FC<Step3Props> = ({ prevStep, govtDocument }) => {
             <label className="block text-sm font-medium mb-2 text-gray-300">
               Organization Name
             </label>
-            <p className="text-lg text-white">Your Organization Name</p>
+            <p className="text-lg text-white">
+              {formData.organizationName || "Not provided"}
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-300">
               Organization Website
             </label>
-            <p className="text-lg text-white">https://yourorganization.com</p>
+            <p className="text-lg text-white">
+              {formData.website || "Not provided"}
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-300">
               Location
             </label>
-            <p className="text-lg text-white">City, Country</p>
+            <p className="text-lg text-white">
+              {formData.location || "Not provided"}
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-300">
               Phone Number
             </label>
-            <p className="text-lg text-white">+1 (123) 456-7890</p>
+            <p className="text-lg text-white">
+              {formData.phoneNumber || "Not provided"}
+            </p>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-300">
-              Wallet Address
-            </label>
-            <p className="text-lg text-white">0x...</p>
-          </div>
-
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-300">
               Government Issued Document
@@ -103,10 +114,12 @@ const Step3Review: React.FC<Step3Props> = ({ prevStep, govtDocument }) => {
             Back to Verification
           </button>
           <button
-            type="submit"
+            onClick={submitApplication}
+            type="button"
+            disabled={isLoading}
             className="bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white py-3 px-6 rounded-md transition duration-300 font-medium flex items-center justify-center shadow-lg shadow-primary-600/20"
           >
-            Submit Application
+            {isLoading ? "Loading..." : "Submit Application"}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5 ml-2"

@@ -1,8 +1,24 @@
+import { IssuerApplication } from "../../../types/Issuer";
+
 interface Step1Props {
   nextStep: () => void;
+  formData: IssuerApplication;
+  setFormData: (data: any) => void;
 }
 
-const Step1Information: React.FC<Step1Props> = ({ nextStep }) => {
+const Step1Information: React.FC<Step1Props> = ({
+  nextStep,
+  formData,
+  setFormData,
+}) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData({
+      ...formData,
+      [id]: value,
+    });
+  };
+
   return (
     <>
       <div className="bg-gradient-to-br from-secondary-500/10 to-primary-500/10 rounded-lg p-4 mb-8 border border-gray-700">
@@ -63,6 +79,8 @@ const Step1Information: React.FC<Step1Props> = ({ nextStep }) => {
               <input
                 type="text"
                 id="organizationName"
+                value={formData.organizationName}
+                onChange={handleChange}
                 className="w-full pl-10 px-4 py-3 rounded-md bg-neutral-750/50 border border-gray-600 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your organization name"
               />
@@ -96,6 +114,8 @@ const Step1Information: React.FC<Step1Props> = ({ nextStep }) => {
               <input
                 type="text"
                 id="website"
+                value={formData.website}
+                onChange={handleChange}
                 className="w-full pl-10 px-4 py-3 rounded-md bg-neutral-750/50 border border-gray-600 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 placeholder="https://yourorganization.com"
               />
@@ -135,6 +155,8 @@ const Step1Information: React.FC<Step1Props> = ({ nextStep }) => {
               <input
                 type="text"
                 id="location"
+                value={formData.location}
+                onChange={handleChange}
                 className="w-full pl-10 px-4 py-3 rounded-md bg-neutral-750/50 border border-gray-600 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 placeholder="City, Country"
               />
@@ -168,49 +190,14 @@ const Step1Information: React.FC<Step1Props> = ({ nextStep }) => {
               <input
                 type="tel"
                 id="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
                 className="w-full pl-10 px-4 py-3 rounded-md bg-neutral-750/50 border border-gray-600 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
                 placeholder="+1 (123) 456-7890"
               />
             </div>
           </div>
         </div>
-
-        <div>
-          <label
-            htmlFor="walletAddress"
-            className="block text-sm font-medium mb-2 text-gray-300"
-          >
-            Wallet Address <span className="text-secondary-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-            <input
-              type="text"
-              id="walletAddress"
-              className="w-full pl-10 px-4 py-3 rounded-md bg-neutral-750/50 border border-gray-600 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-              placeholder="0x..."
-            />
-          </div>
-          <p className="mt-1 text-xs text-gray-400">
-            This address will be associated with your certificates
-          </p>
-        </div>
-
         <div className="mt-10 flex justify-end">
           <button
             type="button"
