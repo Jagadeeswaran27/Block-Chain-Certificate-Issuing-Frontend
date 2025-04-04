@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useRef } from "react";
 import { AuthContext } from "../store/context/AuthContext";
 import StepIndicator from "../components/certificate/IssuerApplication/StepIndicator";
 import Step1Information from "../components/certificate/IssuerApplication/Step1Information";
@@ -8,6 +8,8 @@ import IssueCertificateForm from "../components/certificate/IssueCertificateForm
 import { IssuerApplication } from "../types/Issuer";
 import { submitApplication } from "../core/services/IssuerService";
 import { showToast } from "../utils/Toast";
+import QRCode from "react-qr-code";
+import html2canvas from "html2canvas";
 
 export default function IssueCertificatePage() {
   const { user } = useContext(AuthContext);
@@ -20,11 +22,21 @@ export default function IssueCertificatePage() {
     location: "",
     phoneNumber: "",
   });
+  // New state variables for certificate data and QR code
+  const [certificateHash, setCertificateHash] = useState<string | null>(null);
+  const [recipientAddress, setRecipientAddress] = useState<string | null>(null);
+  const [showQRCode, setShowQRCode] = useState<boolean>(false);
 
   const isIssuer = user?.type === "issuer" || user?.type === "admin";
 
   const nextStep = () => setFormStep((prev) => Math.min(prev + 1, 2));
   const prevStep = () => setFormStep((prev) => Math.max(prev - 1, 0));
+
+  const handleCertificateIssued = (hash: string, recipient: string) => {
+    setCertificateHash(hash);
+    setRecipientAddress(recipient);
+    setShowQRCode(true);
+  };
 
   const handleSubmitApplication = async () => {
     if (
@@ -55,6 +67,104 @@ export default function IssueCertificatePage() {
     setIsLoading(false);
   };
 
+  const CertificateQRCode = () => {
+    const qrCodeRef = useRef<HTMLDivElement>(null);
+
+    if (!certificateHash || !recipientAddress) return null;
+
+    const verificationUrl = `https://cert-chain.web.app/scan-to-verify?certhash=${certificateHash}&recipient=${recipientAddress}`;
+
+    const handleShareQRCode = async () => {
+      if (!qrCodeRef.current) return;
+
+      try {
+        const canvas = await html2canvas(qrCodeRef.current);
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            showToast({
+              type: "error",
+              message: "Failed to generate QR code image",
+            });
+            return;
+          }
+
+          const isMobile = /Android|iPhone|iPad|iPod/i.test(
+            navigator.userAgent
+          );
+
+          if (isMobile) {
+            try {
+              await navigator.share({
+                files: [
+                  new File([blob], "certificate-qr.png", { type: "image/png" }),
+                ],
+                title: "Certificate QR Code",
+                text: "Scan this QR code to verify the certificate authenticity",
+              });
+              return;
+            } catch (error) {
+              console.error("Error sharing:", error);
+            }
+          }
+
+          // If not mobile or share failed, copy link to clipboard
+          navigator.clipboard
+            .writeText(verificationUrl)
+            .then(() =>
+              showToast({
+                type: "success",
+                message: "QR link copied to clipboard!",
+              })
+            )
+            .catch(() => downloadQRCode(canvas));
+        }, "image/png");
+      } catch (error) {
+        console.error("Error generating QR code image:", error);
+        showToast({ type: "error", message: "Error generating QR code image" });
+      }
+    };
+
+    const downloadQRCode = (canvas: HTMLCanvasElement) => {
+      const link = document.createElement("a");
+      link.download = "certificate-qr.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      showToast({ type: "success", message: "QR code downloaded" });
+    };
+
+    return (
+      <div className="mt-8 p-6 bg-neutral-800 rounded-lg border border-primary-700/30 text-center">
+        <h3 className="text-xl font-medium mb-4">Certificate QR Code</h3>
+        <p className="mb-4 text-sm text-gray-300">
+          Scan this QR code to verify the certificate authenticity
+        </p>
+        <div
+          ref={qrCodeRef}
+          className="bg-white p-4 inline-block rounded-lg mb-4"
+        >
+          <QRCode value={verificationUrl} size={200} />
+        </div>
+        <button
+          onClick={handleShareQRCode}
+          className="mt-4 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg flex items-center justify-center mx-auto"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+          </svg>
+          Share QR Code
+        </button>
+        <p className="text-xs text-gray-400 break-all mt-2">
+          Verification Link: {verificationUrl}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-750 to-neutral-850 text-white">
       <div className="absolute top-0 inset-x-0 h-40 bg-primary-600/20 -z-10">
@@ -68,7 +178,7 @@ export default function IssueCertificatePage() {
         ></div>
       </div>
 
-      <div className="w-[70%] mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
+      <div className="md:w-[70%] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
         <div className="relative mb-12">
           <h1 className="font-heading text-4xl md:text-5xl mt-6 mb-2 text-white">
             {isIssuer ? "Issue Certificate" : "Become an Issuer"}
@@ -81,7 +191,13 @@ export default function IssueCertificatePage() {
         </div>
 
         {isIssuer ? (
-          <IssueCertificateForm />
+          <>
+            <IssueCertificateForm
+              onCertificateIssued={handleCertificateIssued}
+              disableQRCode={() => setShowQRCode(false)}
+            />
+            {showQRCode && <CertificateQRCode />}
+          </>
         ) : (
           <div className="bg-neutral-850/80 backdrop-blur-sm rounded-xl shadow-2xl overflow-hidden border border-primary-900/30">
             <div className="bg-gradient-to-r from-primary-700 to-primary-600 py-6 px-8">

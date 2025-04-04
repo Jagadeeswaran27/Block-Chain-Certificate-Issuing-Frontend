@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { ethers } from "ethers";
 import { ABI, ADDRESS } from "../utils/Connection";
@@ -54,14 +55,16 @@ export default function VerifyCertificatePage() {
     });
 
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
+      const provider = new ethers.providers.JsonRpcProvider(
+        `https://eth-sepolia.g.alchemy.com/v2/${
+          import.meta.env.VITE_SEPOLIA_API_KEY
+        }`
+      );
 
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         CONTRACT_ABI,
-        signer
+        provider
       );
 
       setVerification({

@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { ethers } from "ethers";
 import { ABI, ADDRESS } from "../utils/Connection";
+import { Link } from "react-router-dom";
+import { Routes } from "../utils/Routes";
 
 declare global {
   interface Window {
@@ -57,14 +60,15 @@ const HomePage = () => {
       setIssuerName(null);
       setDocumentUrl(null);
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
-
+      const provider = new ethers.providers.JsonRpcProvider(
+        `https://eth-sepolia.g.alchemy.com/v2/${
+          import.meta.env.VITE_SEPOLIA_API_KEY
+        }`
+      );
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         CONTRACT_ABI,
-        signer
+        provider
       );
 
       setVerificationResult("Verifying certificate...");
@@ -106,9 +110,12 @@ const HomePage = () => {
                 certificate instantly and securely.
               </p>
               <div className="mt-10 flex items-center gap-x-6">
-                <a className="rounded-md bg-secondary-500 px-6 py-3 text-lg font-semibold text-neutral-850 shadow-sm hover:bg-secondary-400 transition-all focus:outline-none focus:ring-2 focus:ring-secondary-400">
+                <Link
+                  to={Routes.verifyCertificate}
+                  className="rounded-md bg-secondary-500 px-6 py-3 text-lg font-semibold text-neutral-850 shadow-sm hover:bg-secondary-400 transition-all focus:outline-none focus:ring-2 focus:ring-secondary-400"
+                >
                   Verify Certificate
-                </a>
+                </Link>
                 <a
                   href="#learn-more"
                   onClick={handleSmoothScroll}
@@ -421,9 +428,12 @@ const HomePage = () => {
           </h2>
           <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
             <div className="inline-flex rounded-md shadow">
-              <a className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
+              <Link
+                to={Routes.verifyCertificate}
+                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+              >
                 Get started
-              </a>
+              </Link>
             </div>
             <div className="ml-3 inline-flex rounded-md shadow">
               <a

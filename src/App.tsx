@@ -13,6 +13,9 @@ import { ToastContainer } from "react-toastify";
 import ScrollToTop from "./components/common/ScrollToTop";
 import AdminProtection from "./store/protection/AdminProtection";
 import AdminDashboard from "./pages/AdminDashboard";
+import AuthRedirect from "./store/protection/AuthRedirect";
+import ScanToVerifyPage from "./pages/ScanToVerifyPage";
+import IssuedCertificatesPage from "./pages/IssuedCertificatesPage";
 
 export default function App() {
   return (
@@ -22,8 +25,14 @@ export default function App() {
         <Routes>
           <Route path={AppRoutes.home} element={<RootPage />}>
             <Route index element={<HomePage />} />
-            <Route path={AppRoutes.login} element={<LoginPage />} />
-            <Route path={AppRoutes.signup} element={<SignupPage />} />
+            <Route
+              path={AppRoutes.login}
+              element={<AuthRedirect element={<LoginPage />} />}
+            />
+            <Route
+              path={AppRoutes.signup}
+              element={<AuthRedirect element={<SignupPage />} />}
+            />
             <Route
               path={AppRoutes.issueCertificate}
               element={<ProtectedRoute element={<IssueCertificatePage />} />}
@@ -35,6 +44,14 @@ export default function App() {
             <Route
               path={AppRoutes.adminDashboard}
               element={<AdminProtection element={<AdminDashboard />} />}
+            />
+            <Route
+              path={AppRoutes.scanToVerify}
+              element={<ScanToVerifyPage />}
+            />
+            <Route
+              path="/issued-certificates"
+              element={<ProtectedRoute element={<IssuedCertificatesPage />} />}
             />
           </Route>
         </Routes>

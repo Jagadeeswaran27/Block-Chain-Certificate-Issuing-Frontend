@@ -6,4 +6,5 @@ export const Routes = {
   adminDashboard: "/admin-dashboard",
   verifyCertificate: "/verify-certificate",
   about: "/about",
+  scanToVerify: "/scan-to-verify",
 };

@@ -1,10 +1,28 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import FileUpload from "./FileUpload";
 import { ethers } from "ethers";
-import { ABI, ADDRESS } from "../../utils/Connection";
 import { showToast } from "../../utils/Toast";
+import { AuthContext } from "../../store/context/AuthContext";
+import { storeCertificate } from "../../core/services/CertificateService";
+import { Certificate } from "../../types/Certificate";
+import { Link } from "react-router-dom"; // Add this import
+import { ADDRESS } from "../../utils/Connection";
 
-const IssueCertificateForm = () => {
+type ResponseType = {
+  timestamp: number;
+  txHash: string;
+  tokenId: string;
+};
+interface IssueCertificateFormProps {
+  onCertificateIssued: (hash: string, recipient: string) => void;
+  disableQRCode: () => void;
+}
+
+const IssueCertificateForm = ({
+  onCertificateIssued,
+  disableQRCode,
+}: IssueCertificateFormProps) => {
+  const { user } = useContext(AuthContext);
   const [file, setFile] = useState<File | null>(null);
   const [issuerName, setIssuerName] = useState("");
   const [certificateTitle, setCertificateTitle] = useState("");
@@ -15,6 +33,7 @@ const IssueCertificateForm = () => {
   const [certificateHash, setCertificateHash] = useState("");
   const [certificateUrl, setCertificateUrl] = useState("");
   const [issueTimestamp, setIssueTimestamp] = useState<number>(0);
+  const [tokenId, setTokenId] = useState<string>("");
 
   const PINATA_UPLOAD_URL = import.meta.env.VITE_PINATA_UPLOAD_URL;
   const PINATA_API_KEY = import.meta.env.VITE_PINATA_API_KEY;
@@ -61,37 +80,95 @@ const IssueCertificateForm = () => {
       console.log("File hash:", fileHash);
       setCertificateHash(fileHash);
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
-
-      const contract = new ethers.Contract(ADDRESS, ABI, signer);
-      const tx = await contract.issueCertificate(
-        recipientAddress,
-        issuerName,
-        fileHash,
-        certificateTitle,
-        fileUrl
+      const apiRes = await fetch(
+        "https://us-central1-cerchain-48685.cloudfunctions.net/api/issue-certificate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            issuerName,
+            recipientAddress,
+            fileHash,
+            fileUrl,
+            certificateTitle,
+          }),
+        }
       );
-      await tx.wait();
 
-      console.log("Transaction hash:", tx.hash);
-      setTransactionHash(tx.hash);
-      setIssueTimestamp(Date.now());
+      let tstamp = 0;
+      let thash = "";
+      let tId = "";
+      if (apiRes.ok) {
+        const data: ResponseType = await apiRes.json();
+        console.log("API response:", data);
+        const { timestamp, txHash, tokenId } = data;
+        tstamp = data.timestamp;
+        thash = data.txHash;
+        tId = tokenId;
+        setTransactionHash(txHash);
+        setIssueTimestamp(timestamp);
+        setTokenId(tokenId); // Make sure to set the tokenId state
+      }
+
+      if (user?.uid) {
+        const certificateData: Certificate = {
+          title: certificateTitle,
+          issuer: issuerName,
+          recipient: recipientAddress,
+          certificateHash: fileHash,
+          fileUrl: fileUrl,
+          timestamp: tstamp,
+          transactionHash: thash,
+          qrLink: `https://cert-chain.web.app/scan-to-verify?certhash=${fileHash}&recipient=${recipientAddress}`,
+          tokenId: tId,
+        };
+
+        await storeCertificate(user.uid, certificateData);
+      } else {
+        console.error("User not authenticated");
+      }
+
       setIsSuccess(true);
-
+      onCertificateIssued(fileHash, recipientAddress);
       showToast({
         type: "success",
         message: "Certificate successfully issued on the blockchain!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error:", error);
       showToast({
         type: "error",
-        message: error.message || "Failed to issue certificate",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to issue certificate",
       });
     }
     setIsLoading(false);
+  };
+
+  const getNftLink = (tokenId: string) => {
+    return `https://sepolia.etherscan.io/nft/${ADDRESS}/${tokenId}`;
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showToast({
+          type: "success",
+          message: "Copied to clipboard",
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to copy: ", error);
+        showToast({
+          type: "error",
+          message: "Failed to copy to clipboard",
+        });
+      });
   };
 
   const resetForm = () => {
@@ -103,9 +180,12 @@ const IssueCertificateForm = () => {
     setTransactionHash("");
     setCertificateHash("");
     setCertificateUrl("");
+    disableQRCode();
   };
 
   const SuccessDisplay = () => {
+    const nftLink = getNftLink(tokenId);
+
     return (
       <div className="bg-neutral-750/70 rounded-xl border border-green-500/30 p-6 mt-8 shadow-lg overflow-hidden">
         <div className="flex items-center mb-6">
@@ -171,13 +251,39 @@ const IssueCertificateForm = () => {
                     {transactionHash}
                   </p>
                 </div>
-                <div>
+                <div className="mb-3">
                   <span className="text-xs text-gray-500">
                     Certificate Hash
                   </span>
                   <p className="text-primary-400 font-mono text-sm break-all">
                     {certificateHash}
                   </p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">NFT Link</span>
+                  <div className="flex items-center mt-1">
+                    <p className="text-primary-400 font-mono text-sm truncate flex-1">
+                      {nftLink}
+                    </p>
+                    <button
+                      onClick={() => copyToClipboard(nftLink)}
+                      className="ml-2 text-gray-400 hover:text-white"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -245,6 +351,27 @@ const IssueCertificateForm = () => {
                     </svg>
                     View on IPFS
                   </a>
+                  <a
+                    href={nftLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center text-sm text-green-500 hover:text-green-400 transition-colors"
+                  >
+                    <svg
+                      className="h-4 w-4 mr-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                      />
+                    </svg>
+                    View NFT on Etherscan
+                  </a>
                 </div>
               )}
             </div>
@@ -279,11 +406,41 @@ const IssueCertificateForm = () => {
   return (
     <div className="bg-neutral-850/80 backdrop-blur-sm rounded-xl shadow-2xl overflow-hidden border border-primary-900/30">
       <div className="bg-gradient-to-r from-primary-700 to-primary-600 py-6 px-8">
-        <div className="flex items-center">
-          <div className="bg-white/20 rounded-full p-3 mr-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="bg-white/20 rounded-full p-3 mr-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Certificate Issuance Portal
+              </h2>
+              <p className="text-sm text-white/70">
+                Complete the form below to create a new certificate
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/issued-certificates"
+            className="hidden sm:flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-md transition text-white text-sm font-medium group"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
+              className="h-5 w-5 mr-2"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -292,21 +449,29 @@ const IssueCertificateForm = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">
-              Certificate Issuance Portal
-            </h2>
-            <p className="text-sm text-white/70">
-              Complete the form below to create a new certificate
-            </p>
-          </div>
+            View Issued Certificates
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 ml-1 transform transition-transform group-hover:translate-x-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </Link>
         </div>
       </div>
 
+      {/* Also add a mobile-friendly link at the bottom of the form for small screens */}
       <div className="p-8">
         {!isSuccess ? (
           <form className="space-y-8">
@@ -510,6 +675,29 @@ const IssueCertificateForm = () => {
                   </>
                 )}
               </button>
+
+              <div className="mt-4 text-center sm:hidden">
+                <Link
+                  to="/issued-certificates"
+                  className="inline-flex items-center text-primary-400 hover:text-primary-300 transition"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  View all your issued certificates
+                </Link>
+              </div>
             </div>
           </form>
         ) : (
